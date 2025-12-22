@@ -1,12 +1,16 @@
-# Cloudflare Pages Configuration
+# Cloudflare Pages Configuration for ritakartina.com
 name = "ritakartina-blog"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-12-22"
 
 [build]
 command = "npm run build"
 cwd = "."
-watch_dir = "src"
 
 [build.upload]
 format = "service-worker"
 dir = "dist"
+main = "./dist/index.html"
+
+# Environment Variables (set via Cloudflare Dashboard)
+# VITE_SUPABASE_URL = https://zmnhzduscqfgrxxsqoyo.supabase.co
+# VITE_SUPABASE_ANON_KEY = (set via dashboard)
