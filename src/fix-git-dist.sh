@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "╔════════════════════════════════════════════════════════════════╗"
-echo "║  🔧 FIX GIT DIST ISSUE                                        ║"
+echo "║  🔧 FIX GIT DIST ISSUE + BUILD CONFIGS                       ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -15,7 +15,8 @@ echo "This script will:"
 echo "  1. Remove dist/ from Git tracking"
 echo "  2. Remove node_modules/ from Git tracking"
 echo "  3. Ensure .gitignore is working"
-echo "  4. Create a clean commit"
+echo "  4. Add build config files"
+echo "  5. Create a clean commit"
 echo ""
 
 read -p "Continue? (y/n) " -n 1 -r
@@ -70,7 +71,32 @@ else
 fi
 
 echo ""
-echo "📦 Step 4: Creating clean commit..."
+echo "📦 Step 4: Adding build config files..."
+echo "─────────────────────────────────────"
+
+# Add config files
+if [ -f "netlify.toml" ]; then
+  git add netlify.toml
+  echo -e "${GREEN}✓${NC} netlify.toml added"
+fi
+
+if [ -f "vercel.json" ]; then
+  git add vercel.json
+  echo -e "${GREEN}✓${NC} vercel.json added"
+fi
+
+if [ -f "wrangler.toml" ]; then
+  git add wrangler.toml
+  echo -e "${GREEN}✓${NC} wrangler.toml added"
+fi
+
+if [ -f "public/_redirects" ]; then
+  git add public/_redirects
+  echo -e "${GREEN}✓${NC} _redirects added"
+fi
+
+echo ""
+echo "📝 Step 5: Creating clean commit..."
 echo "─────────────────────────────────────"
 
 # Stage .gitignore
@@ -80,7 +106,7 @@ git add .gitignore
 if git diff --cached --quiet; then
   echo -e "${YELLOW}ℹ${NC} No changes to commit (already clean!)"
 else
-  git commit -m "Remove dist and node_modules from Git tracking"
+  git commit -m "Remove dist and node_modules from Git tracking, add build config files"
   echo -e "${GREEN}✓${NC} Changes committed"
 fi
 
@@ -94,6 +120,7 @@ echo "What was done:"
 echo "  ✓ dist/ removed from Git (if tracked)"
 echo "  ✓ node_modules/ removed from Git (if tracked)"
 echo "  ✓ .gitignore verified/updated"
+echo "  ✓ Build config files added"
 echo "  ✓ Changes committed"
 echo ""
 
