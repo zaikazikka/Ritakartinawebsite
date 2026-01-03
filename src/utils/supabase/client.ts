@@ -3,6 +3,10 @@ import { projectId, publicAnonKey } from './info';
 
 const supabaseUrl = `https://${projectId}.supabase.co`;
 
+// Check if we're in a preview/development environment where Supabase might not be accessible
+const isPreviewEnvironment = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('figma') || window.location.hostname.includes('localhost'));
+
 export const supabase = createSupabaseClient(supabaseUrl, publicAnonKey);
 
 // KV Store helper functions untuk direct database access
@@ -11,89 +15,156 @@ const KV_TABLE = 'kv_store_46c3d36c';
 // Storage bucket name
 const STORAGE_BUCKET = 'writings-images'; // Gunakan 1 bucket untuk semua file (gambar dan dokumen)
 
+// Helper function to check if Supabase is accessible
+async function checkSupabaseConnection(): Promise<boolean> {
+  try {
+    const { error } = await supabase.from(KV_TABLE).select('key').limit(1);
+    return !error;
+  } catch (err) {
+    console.warn('Supabase not accessible:', err);
+    return false;
+  }
+}
+
 export const kvStore = {
   // Get single value by key
   async get(key: string) {
-    const { data, error } = await supabase
-      .from(KV_TABLE)
-      .select('value')
-      .eq('key', key)
-      .single();
-    
-    if (error) {
-      if (error.code === 'PGRST116') return null; // Not found
+    try {
+      const { data, error } = await supabase
+        .from(KV_TABLE)
+        .select('value')
+        .eq('key', key)
+        .single();
+      
+      if (error) {
+        if (error.code === 'PGRST116') return null; // Not found
+        throw error;
+      }
+      
+      return data?.value;
+    } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn('Supabase fetch failed (preview mode):', error);
+        return null;
+      }
       throw error;
     }
-    
-    return data?.value;
   },
 
   // Set single value
   async set(key: string, value: any) {
-    const { error } = await supabase
-      .from(KV_TABLE)
-      .upsert({ key, value }, { onConflict: 'key' });
-    
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from(KV_TABLE)
+        .upsert({ key, value }, { onConflict: 'key' });
+      
+      if (error) throw error;
+    } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn('Supabase set failed (preview mode):', error);
+        return;
+      }
+      throw error;
+    }
   },
 
   // Delete single value
   async del(key: string) {
-    const { error } = await supabase
-      .from(KV_TABLE)
-      .delete()
-      .eq('key', key);
-    
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from(KV_TABLE)
+        .delete()
+        .eq('key', key);
+      
+      if (error) throw error;
+    } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn('Supabase delete failed (preview mode):', error);
+        return;
+      }
+      throw error;
+    }
   },
 
   // Get all values with prefix
   async getByPrefix(prefix: string) {
-    const { data, error } = await supabase
-      .from(KV_TABLE)
-      .select('key, value')
-      .like('key', `${prefix}%`)
-      .order('key');
-    
-    if (error) throw error;
-    
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from(KV_TABLE)
+        .select('key, value')
+        .like('key', `${prefix}%`)
+        .order('key');
+      
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn(`Supabase getByPrefix failed (preview mode) for prefix: ${prefix}`, error);
+        return [];
+      }
+      throw error;
+    }
   },
 
   // Get multiple values
   async mget(keys: string[]) {
-    const { data, error } = await supabase
-      .from(KV_TABLE)
-      .select('key, value')
-      .in('key', keys);
-    
-    if (error) throw error;
-    
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from(KV_TABLE)
+        .select('key, value')
+        .in('key', keys);
+      
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn('Supabase mget failed (preview mode):', error);
+        return [];
+      }
+      throw error;
+    }
   },
 
   // Set multiple values
   async mset(entries: Record<string, any>) {
-    const rows = Object.entries(entries).map(([key, value]) => ({
-      key,
-      value,
-    }));
-    
-    const { error } = await supabase
-      .from(KV_TABLE)
-      .upsert(rows, { onConflict: 'key' });
-    
-    if (error) throw error;
+    try {
+      const rows = Object.entries(entries).map(([key, value]) => ({
+        key,
+        value,
+      }));
+      
+      const { error } = await supabase
+        .from(KV_TABLE)
+        .upsert(rows, { onConflict: 'key' });
+      
+      if (error) throw error;
+    } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn('Supabase mset failed (preview mode):', error);
+        return;
+      }
+      throw error;
+    }
   },
 
   // Delete multiple values
   async mdel(keys: string[]) {
-    const { error } = await supabase
-      .from(KV_TABLE)
-      .delete()
-      .in('key', keys);
-    
-    if (error) throw error;
+    try {
+      const { error } = await supabase
+        .from(KV_TABLE)
+        .delete()
+        .in('key', keys);
+      
+      if (error) throw error;
+    } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn('Supabase mdel failed (preview mode):', error);
+        return;
+      }
+      throw error;
+    }
   },
 };
 
@@ -125,7 +196,12 @@ export const storageHelper = {
         .getPublicUrl(fileName);
 
       return publicUrl;
-    } catch (error) {
+    } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn('Storage upload failed (preview mode):', error);
+        // Return a placeholder image URL for preview
+        return 'https://via.placeholder.com/400x300?text=Preview+Mode';
+      }
       console.error('Error uploading image:', error);
       throw error;
     }
@@ -190,6 +266,11 @@ export const storageHelper = {
 
       return publicUrl;
     } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn('Storage document upload failed (preview mode):', error);
+        // Return a placeholder for preview
+        return 'https://via.placeholder.com/400x300?text=Document+Preview';
+      }
       console.error('Error uploading document:', error);
       throw error;
     }
@@ -212,7 +293,11 @@ export const storageHelper = {
         console.error('Delete error:', error);
         throw error;
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn('Storage delete failed (preview mode):', error);
+        return;
+      }
       console.error('Error deleting image:', error);
       throw error;
     }
@@ -230,7 +315,11 @@ export const storageHelper = {
       if (!listError || listError.message.includes('Bucket not found')) {
         console.log('✅ Storage bucket ready:', STORAGE_BUCKET);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (isPreviewEnvironment || error?.message?.includes('Failed to fetch')) {
+        console.warn('Storage init failed (preview mode):', error);
+        return;
+      }
       // Bucket doesn't exist - user needs to create it manually via Supabase Dashboard
       console.warn(`⚠️ Storage bucket not found. Please create bucket "${STORAGE_BUCKET}" via Supabase Dashboard:
       
